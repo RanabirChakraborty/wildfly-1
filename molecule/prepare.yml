@@ -35,11 +35,11 @@
         that:
           - sudo_pkg_name in ansible_facts.packages
 
-    - name: "Ensure required packages are installed."
+    - name: "Ensure all required packages are installed."
       become: "{{ wildfly_install_requires_become | default(true) }}"
       ansible.builtin.yum:
         name:
-          - java-17-openjdk
+          - java-21-openjdk-headless
           - procps-ng
           - tzdata-java
         state: present
