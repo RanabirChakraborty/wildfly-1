@@ -1,4 +1,11 @@
 ---
+- name: Check if WildFly service is already running
+  ansible.builtin.systemd:
+    name: "{{ wildfly_service_name }}"
+  register: wildfly_service_status
+  failed_when: false
+  changed_when: false
+
 - name: Enable extension in wildfly
   when: (wildfly_version.split('.')[:3] | join('.') is version('26.0.1', '>=')) or (wildfly_version.split('.')[:1] | join('.') is version('8', '>='))
   become: "{{ wildfly_systemd_require_privilege_escalation | default(true) }}"
@@ -11,7 +18,18 @@
       owner: "{{ wildfly_systemd.user }}"
       group: "{{ wildfly_systemd.group }}"
       mode: '0755'
+    register: yml_config_dir_wildfly
     notify: restart_wildfly
+    when: wildfly_service_status.status is defined and wildfly_service_status.status.ActiveState == "active"
+
+  - name: Create YAML configuration directory (no restart on first deployment)
+    ansible.builtin.file:
+      path: "{{ wildfly_systemd.home }}{{ wildfly_systemd.yml_config.base_path }}{{ wildfly_systemd.yml_config.path }}"
+      state: directory
+      owner: "{{ wildfly_systemd.user }}"
+      group: "{{ wildfly_systemd.group }}"
+      mode: '0755'
+    when: wildfly_service_status.status is not defined or wildfly_service_status.status.ActiveState != "active"
 
   - name: Enable YAML configuration extension
     ansible.builtin.template:
@@ -20,7 +38,18 @@
       owner: "{{ wildfly_systemd.user }}"
       group: "{{ wildfly_systemd.group }}"
       mode: '0644'
+    register: yml_config_template_wildfly
     notify: restart_wildfly
+    when: wildfly_service_status.status is defined and wildfly_service_status.status.ActiveState == "active"
+
+  - name: Enable YAML configuration extension (no restart on first deployment)
+    ansible.builtin.template:
+      src: "wfly.yml.config.j2"
+      dest: "{{ wildfly_systemd.home }}{{ wildfly_systemd.yml_config.base_path }}{{ wildfly_systemd.yml_config.path }}/{{ wildfly_systemd.yml_config.file }}"
+      owner: "{{ wildfly_systemd.user }}"
+      group: "{{ wildfly_systemd.group }}"
+      mode: '0644'
+    when: wildfly_service_status.status is not defined or wildfly_service_status.status.ActiveState != "active"
 
 - name: Enable extension in EAP
   when: eap_enable is defined and eap_enable and wildfly_version.split('.')[:1] | join('.') is version('7', '==')
@@ -44,6 +73,16 @@
       group: "{{ wildfly_systemd.group }}"
       mode: '0644'
     notify: restart_wildfly
+    when: wildfly_service_status.status is defined and wildfly_service_status.status.ActiveState == "active"
+
+  - name: Enable YAML configuration extension (no restart on first deployment)
+    ansible.builtin.template:
+      src: "wfly.yml.config.j2"
+      dest: "{{ wildfly_systemd.home }}{{ wildfly_systemd.yml_config.eap_path }}{{ slurped_eap_version.content | b64decode }}.CP{{ wildfly_systemd.yml_config.path }}/{{ wildfly_systemd.yml_config.file }}"
+      owner: "{{ wildfly_systemd.user }}"
+      group: "{{ wildfly_systemd.group }}"
+      mode: '0644'
+    when: wildfly_service_status.status is not defined or wildfly_service_status.status.ActiveState != "active"
 
 - name: "Deploy YAML configuration files: {{ wildfly_yml_configs | flatten }}"
   become: "{{ wildfly_systemd_require_privilege_escalation | default(true) }}"
@@ -59,3 +98,19 @@
   notify:
     - restart_wildfly
     - exec_restorecon
+  when: wildfly_service_status.status is defined and wildfly_service_status.status.ActiveState == "active"
+
+- name: "Deploy YAML configuration files (no restart on first deployment): {{ wildfly_yml_configs | flatten }}"
+  become: "{{ wildfly_systemd_require_privilege_escalation | default(true) }}"
+  ansible.builtin.template:
+    src: "{{ wildfly_yml_configs_repository }}{{ file }}"
+    dest: "{{ basedir }}/{{ file | regex_replace('.j2', '') }}"
+    owner: "{{ wildfly_systemd.user }}"
+    group: "{{ wildfly_systemd.group }}"
+    mode: '0644'
+  loop: "{{ wildfly_yml_configs | flatten }}"
+  loop_control:
+    loop_var: file
+  notify:
+    - exec_restorecon
+  when: wildfly_service_status.status is not defined or wildfly_service_status.status.ActiveState != "active"

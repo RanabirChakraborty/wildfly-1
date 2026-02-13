@@ -48,7 +48,7 @@ wildfly_selinux_enabled: False
 
 wildfly_systemd_wait_port: 9990
 wildfly_systemd_startup_message_id: 'WFLYSRV0025'
-wildfly_systemd_wait_for_timeout: 60
+wildfly_systemd_wait_for_timeout: 120
 wildfly_systemd_wait_for_delay: 10
 wildfly_systemd_wait_for_port: "{{ wildfly_enable_yml_config }}"
 wildfly_systemd_wait_for_log: False
