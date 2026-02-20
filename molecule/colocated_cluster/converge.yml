@@ -5,9 +5,21 @@
     - vars.yml
     - ../apps.yml
   tasks:
-    - name: "Include wildfly_systemd"
+    - name: "Include wildfly_install"
       ansible.builtin.include_role:
         name: wildfly_install
+
+- name: Apply patches
+  hosts: all
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: "Apply cumulative patches"
+      ansible.builtin.include_role:
+        name: wildfly_utils
+        tasks_from: apply_cp.yml
+      when:
+        - wildfly_apply_cp is defined and wildfly_apply_cp
 
 - name: Install multiple wildfly services
   hosts: all
