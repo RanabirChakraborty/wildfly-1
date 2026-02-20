@@ -55,11 +55,3 @@ argument_specs:
                 default: 0
                 description: "Increment for `jboss.socket.binding.port-offset`"
                 type: "int"
-            eap_user:
-                default: "wildfly"
-                description: "POSIX user account for EAP"
-                type: "str"
-            eap_group:
-                default: "{{ wildfly_user }}"
-                description: "POSIX group for EAP service"
-                type: "str"

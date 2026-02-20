@@ -14,19 +14,26 @@ wildfly-configuration:
   subsystem:
     jgroups:
       stack:
-        tcp:
+        tcp-cluster:
           transport:
             TCP:
               socket-binding: jgroups-tcp
           protocol:
-            MPING: !remove
-          protocol:
             TCPPING:
-              add-index: 0
               socket-bindings:
                 - wildfly0
                 - wildfly1
                 - wildfly2
+            MERGE3:
+            FD_SOCK:
+            FD_ALL:
+            VERIFY_SUSPECT:
+            pbcast.NAKACK2:
+            UNICAST3:
+            pbcast.STABLE:
+            pbcast.GMS:
+            MFC:
+            FRAG3:
       channel:
         ee:
-          stack: tcp
+          stack: tcp-cluster

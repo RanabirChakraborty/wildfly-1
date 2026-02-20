@@ -162,6 +162,48 @@
         - daemon_reload is defined or daemon_reload_env is defined
         - daemon_reload.changed or daemon_reload_env.changed
 
+    - name: "Debug: Display systemd service file content"
+      ansible.builtin.command: cat {{ wildfly_service_systemd_file }}
+      register: systemd_service_content
+      changed_when: false
+
+    - name: "Debug: Display systemd env file content"
+      ansible.builtin.command: cat {{ wildfly_service_systemd_env_file }}
+      register: systemd_env_content
+      changed_when: false
+
+    - name: "Debug: Show systemd service file"
+      ansible.builtin.debug:
+        msg: "{{ systemd_service_content.stdout_lines }}"
+
+    - name: "Debug: Show systemd env file"
+      ansible.builtin.debug:
+        msg: "{{ systemd_env_content.stdout_lines }}"
+
+    - name: "Debug: List YAML config files in basedir"
+      ansible.builtin.command: ls -la {{ basedir }}/
+      register: basedir_contents
+      changed_when: false
+      when: wildfly_enable_yml_config
+
+    - name: "Debug: Show basedir contents"
+      ansible.builtin.debug:
+        msg: "{{ basedir_contents.stdout_lines }}"
+      when: wildfly_enable_yml_config
+
+    - name: "Debug: Show YAML config files content"
+      ansible.builtin.command: cat {{ basedir }}/{{ item | regex_replace('.j2$', '') }}
+      register: yaml_config_content
+      changed_when: false
+      loop: "{{ wildfly_yml_configs | flatten }}"
+      when: wildfly_enable_yml_config
+
+    - name: "Debug: Display YAML configs"
+      ansible.builtin.debug:
+        msg: "File {{ item.item }}: {{ item.stdout_lines }}"
+      loop: "{{ yaml_config_content.results }}"
+      when: wildfly_enable_yml_config and yaml_config_content is defined
+
     - name: "Ensure service is started"
       ansible.builtin.include_tasks: service.yml
       vars:

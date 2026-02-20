@@ -6,10 +6,53 @@
     quiet: true
 
 - name: "Set instance {{ wildfly_instance_name }} state to {{ instance_state }}"
-  throttle: 1
-  ansible.builtin.systemd:
-    name: "{{ wildfly_service_name }}"
-    state: "{{ instance_state }}"
-    enabled: "{{ wildfly_systemd.enabled | default(omit) }}"
-    daemon_reload: true
   become: "{{ wildfly_install_requires_become | default(true) }}"
+  block:
+    - name: "Start/restart service {{ wildfly_service_name }}"
+      throttle: 1
+      ansible.builtin.systemd:
+        name: "{{ wildfly_service_name }}"
+        state: "{{ instance_state }}"
+        enabled: "{{ wildfly_systemd.enabled | default(omit) }}"
+        daemon_reload: true
+  rescue:
+    - name: "Get systemd service status for {{ wildfly_service_name }}"
+      ansible.builtin.command: systemctl status {{ wildfly_service_name }}
+      register: service_status
+      failed_when: false
+      changed_when: false
+
+    - name: "Get journalctl logs for {{ wildfly_service_name }}"
+      ansible.builtin.command: journalctl -xeu {{ wildfly_service_name }} --no-pager -n 100
+      register: service_logs
+      failed_when: false
+      changed_when: false
+
+    - name: "Check if server log exists"
+      ansible.builtin.stat:
+        path: "{{ wildfly_basedir_prefix | default(wildfly_systemd.home) }}/standalone/log/server.log"
+      register: server_log_stat
+
+    - name: "Get server.log tail if it exists"
+      ansible.builtin.command: tail -100 {{ wildfly_basedir_prefix | default(wildfly_systemd.home) }}/standalone/log/server.log
+      register: server_log
+      failed_when: false
+      changed_when: false
+      when: server_log_stat.stat.exists
+
+    - name: "Display systemd service status"
+      ansible.builtin.debug:
+        msg: "{{ service_status.stdout_lines }}"
+
+    - name: "Display journalctl logs"
+      ansible.builtin.debug:
+        msg: "{{ service_logs.stdout_lines }}"
+
+    - name: "Display server.log"
+      ansible.builtin.debug:
+        msg: "{{ server_log.stdout_lines }}"
+      when: server_log_stat.stat.exists
+
+    - name: "Fail with service start error"
+      ansible.builtin.fail:
+        msg: "Failed to start {{ wildfly_service_name }}. Check the debug output above for details."
