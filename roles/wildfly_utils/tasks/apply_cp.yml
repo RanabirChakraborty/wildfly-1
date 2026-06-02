@@ -47,9 +47,9 @@
       middleware_automation.common.product_search:
         client_id: "{{ rhn_username }}"
         client_secret: "{{ rhn_password }}"
-        content_type: BUGFIX
+        product_type: BUGFIX
         product_version: "{{ eap_version | regex_replace('([0-9]+)[.]([0-9]+)[.][0-9]+[.]?([A-Za-z]+)?', '\\1.\\2 \\3') }}"
-        product_code: "{{ eap_product_category }}"
+        product_category: "{{ eap_product_category }}"
       register: rhn_products
       no_log: "{{ omit_rhn_output | default(true) }}"
       delegate_to: localhost
