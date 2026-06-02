@@ -18,9 +18,10 @@
 - name: "Validate that archive {{ wildfly_archive_filename }} exists on controller (if install is offline: {{ wildfly_offline_install }})."
   ansible.builtin.assert:
     that:
-      - wildfly_version is defined and wildfly_archive_filename_local | default(wildfly_archive_filename) is exists
+      - wildfly_version is defined
+      - wildfly_archive_filename_local | default((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + wildfly_archive_filename) is exists
     quiet: true
-    fail_msg: "An offline install was requested, but files are not present on the controller: {{ wildfly_archive_filename }}"
+    fail_msg: "An offline install was requested, but files are not present on the controller: {{ wildfly_archive_filename_local | default((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + wildfly_archive_filename) }}"
   when:
     - wildfly_offline_install and wildfly_archive_filename_on_controller
 
@@ -38,10 +39,10 @@
 - name: "Validate existing additional zipfiles {{ wildfly_archive_filename }} for offline installs"
   ansible.builtin.assert:
     that:
-      - not eap_apply_cp or (eap_patch_version is defined and eap_patch_archive_filename is exists)
-      - not eap_elytron_adapter or (eap_elytron_adapter_archive_filename is exists)
+      - not eap_apply_cp or (eap_patch_version is defined and ((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + eap_patch_archive_filename) is exists)
+      - not eap_elytron_adapter or (((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + eap_elytron_adapter_archive_filename) is exists)
     quiet: true
-    fail_msg: "An offline install was requested, but files are not present on the controller: {{ eap_patch_archive_filename if eap_apply_cp else '' }} {{ eap_elytron_adapter_archive_filename if eap_elytron_adapter else '' }}"
+    fail_msg: "An offline install was requested, but files are not present on the controller: {{ ((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + eap_patch_archive_filename) if eap_apply_cp else '' }} {{ ((wildfly_install_download_controller_download_dir | default(lookup('env', 'PWD'))) + '/' + eap_elytron_adapter_archive_filename) if eap_elytron_adapter else '' }}"
   when:
     - wildfly_offline_install
     - eap_enable is defined and eap_enable

@@ -19,5 +19,22 @@
       when:
         - not eap_version is defined
 
+    - name: "Download EAP {{ eap_version }} from Red Hat Network using Unified Downloads API"
+      delegate_to: localhost
+      run_once: true  # noqa: run-once[task]
+      when:
+        - eap_version is defined
+        - rhn_username is defined
+        - rhn_password is defined
+      block:
+        - name: Download JBoss EAP from RHN
+          ansible.builtin.include_role:
+            name: wildfly_utils
+            tasks_from: download_from_rhn.yml
+          vars:
+            eap_archive_filename: "jboss-eap-{{ eap_version }}.zip"
+            zipfile_dest: "{{ lookup('env', 'PWD') }}/jboss-eap-{{ eap_version }}.zip"
+            eap_product_category: appplatform
+
 - name: Import shared molecule prepare playbook
   ansible.builtin.import_playbook: ../prepare.yml
